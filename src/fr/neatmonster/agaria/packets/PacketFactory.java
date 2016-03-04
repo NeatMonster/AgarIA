@@ -14,23 +14,21 @@ import fr.neatmonster.agaria.packets.server.PacketUpdateView;
 
 public class PacketFactory {
     static {
-        registerPacket(PacketAddCell.class);
-        registerPacket(PacketClearCells.class);
-        registerPacket(PacketDrawLine.class);
-        registerPacket(PacketExperienceInfo.class);
-        registerPacket(PacketSetBorder.class);
-        registerPacket(PacketUpdateCells.class);
-        registerPacket(PacketUpdateLeaderboard.class);
-        registerPacket(PacketUpdateView.class);
+        registerPacket(32, PacketAddCell.class);
+        registerPacket(18, PacketClearCells.class);
+        registerPacket(21, PacketDrawLine.class);
+        registerPacket(81, PacketExperienceInfo.class);
+        registerPacket(64, PacketSetBorder.class);
+        registerPacket(16, PacketUpdateCells.class);
+        registerPacket(49, PacketUpdateLeaderboard.class);
+        registerPacket(17, PacketUpdateView.class);
     }
 
     private static Map<Byte, Class<? extends ServerPacket>> SERVER_PACKETS = new HashMap<>();
 
-    private static void registerPacket(
-            final Class<? extends ServerPacket> packetClass) {
+    private static void registerPacket(final int packetId, final Class<? extends ServerPacket> packetClass) {
         try {
-            final ServerPacket packet = packetClass.newInstance();
-            SERVER_PACKETS.put(packet.getPacketId(), packetClass);
+            SERVER_PACKETS.put((byte) (packetId & 0xff), packetClass);
         } catch (final Exception e) {
             e.printStackTrace();
         }

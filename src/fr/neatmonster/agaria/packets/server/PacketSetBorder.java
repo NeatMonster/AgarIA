@@ -10,10 +10,6 @@ public class PacketSetBorder extends ServerPacket {
     public double maxX;
     public double maxY;
 
-    public PacketSetBorder() {
-        super((byte) (64 & 0xff));
-    }
-
     @Override
     public void read(final ByteBuffer buf) {
         minX = buf.getDouble();

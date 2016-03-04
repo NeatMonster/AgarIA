@@ -9,10 +9,6 @@ public class PacketUpdateView extends ServerPacket {
     public float y;
     public float zoom;
 
-    public PacketUpdateView() {
-        super((byte) (17 & 0xff));
-    }
-
     @Override
     public void read(final ByteBuffer buf) {
         x = buf.getFloat();

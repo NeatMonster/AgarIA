@@ -16,25 +16,33 @@ import org.eclipse.jetty.websocket.api.annotations.WebSocket;
 import fr.neatmonster.agaria.packets.ClientPacket;
 import fr.neatmonster.agaria.packets.PacketFactory;
 import fr.neatmonster.agaria.packets.ServerPacket;
-import fr.neatmonster.agaria.packets.client.PacketResetConnection1;
-import fr.neatmonster.agaria.packets.client.PacketResetConnection2;
-import fr.neatmonster.agaria.packets.client.PacketSendAuthToken;
-import fr.neatmonster.agaria.packets.client.PacketSendToken;
 
 @WebSocket
 public class SocketHandler {
-    private Session              session;
+    private String toString(final ByteBuffer buf) {
+        String out = "";
+        for (int i = 0; i < buf.limit(); ++i) {
+            if (!out.isEmpty())
+                out += " ";
+            final String chr = Integer.toHexString(buf.get(i));
+            if (chr.length() == 1)
+                out += "0";
+            out += chr;
+        }
+        return out;
+    }
+
+    private final GameManager manager;
+
     private final CountDownLatch latch;
+    private Session              session;
 
-    public String token;
-    public String authToken;
-
-    public SocketHandler() {
+    public SocketHandler(final GameManager manager) {
+        this.manager = manager;
         latch = new CountDownLatch(1);
     }
 
-    public boolean awaitClose(final int duration, final TimeUnit unit)
-            throws InterruptedException {
+    public boolean awaitClose(final int duration, final TimeUnit unit) throws InterruptedException {
         return latch.await(duration, unit);
     }
 
@@ -42,56 +50,56 @@ public class SocketHandler {
     public void onWebSocketConnect(final Session session) {
         this.session = session;
 
-        sendPacket(new PacketResetConnection1());
-        sendPacket(new PacketResetConnection2());
-
-        if (token != null) {
-            final PacketSendToken packet = new PacketSendToken();
-            packet.token = token;
-            sendPacket(packet);
-        }
-
-        if (authToken != null) {
-            final PacketSendAuthToken packet = new PacketSendAuthToken();
-            packet.token = authToken;
-            sendPacket(packet);
-        }
-
-        // TODO Notify the client.
+        manager.onSocketOpen();
     }
 
     @OnWebSocketMessage
-    public void onWebSocketMessage(final Session session, final byte[] bufArray,
-            final int offset, final int length) {
-        if (length == 0)
+    public void onWebSocketMessage(final Session session, final byte[] bufArray, final int offset, final int length) {
+        if (length == 0) {
+            GameManager.logger.warning("empty packet received");
             return;
+        }
 
         final ByteBuffer buf = ByteBuffer.wrap(bufArray, offset, length);
         buf.order(ByteOrder.LITTLE_ENDIAN);
-
         final byte packetId = buf.get();
-        final ServerPacket packet = PacketFactory.createPacket(packetId);
 
-        // TODO Notify the client.
+        GameManager.logger.finer("RECV packet ID=" + packetId + " LEN=" + length);
+        GameManager.logger.finest("dump: " + toString(buf));
+
+        final ServerPacket packet = PacketFactory.createPacket(packetId);
+        if (packet == null) {
+            GameManager.logger.warning("unknown packet ID(" + packetId + ")");
+            return;
+        }
+
+        manager.handlePacket(packet);
     }
 
     @OnWebSocketClose
-    public void onWebSocketClose(final Session session, final int closeCode,
-            final String closeReason) {
+    public void onWebSocketClose(final Session session, final int closeCode, final String closeReason) {
         latch.countDown();
 
-        // TODO Notify the client.
+        manager.onSocketClose();
     }
 
     @OnWebSocketError
     public void onWebSocketError(final Session session, final Throwable cause) {
-        // TODO Notify the client.
+        manager.onSocketError(cause);
+    }
+
+    public void close() {
+        session.close();
     }
 
     public void sendPacket(final ClientPacket packet) {
         final ByteBuffer buf = ByteBuffer.allocate(1 + packet.getLength());
         buf.put(packet.getPacketId());
         packet.write(buf);
+
+        GameManager.logger.finer("SEND packet ID=" + packet.getPacketId() + " LEN=" + buf.limit());
+        GameManager.logger.finest("dump: " + toString(buf));
+
         try {
             session.getRemote().sendBytes(buf);
         } catch (final IOException e) {

@@ -9,10 +9,6 @@ public class PacketExperienceInfo extends ServerPacket {
     public int curExp;
     public int nextExp;
 
-    public PacketExperienceInfo() {
-        super((byte) (81 & 0xff));
-    }
-
     @Override
     public void read(final ByteBuffer buf) {
         level = buf.getInt();

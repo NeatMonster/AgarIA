@@ -5,14 +5,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import fr.neatmonster.agaria.packets.ServerPacket;
+import fr.neatmonster.agaria.utils.Pair;
 
 public class PacketUpdateCells extends ServerPacket {
-    public static final class CellEat {
-        public int eaterId;
-        public int eatenId;
-    }
-
-    public static final class CellUpdate {
+    public static final class Update {
         public int    id;
         public int    x;
         public int    y;
@@ -25,21 +21,17 @@ public class PacketUpdateCells extends ServerPacket {
         public String name;
     }
 
-    public final List<CellEat>    eats     = new ArrayList<>();
-    public final List<CellUpdate> updates  = new ArrayList<>();
-    public final List<Integer>    removals = new ArrayList<>();
-
-    public PacketUpdateCells() {
-        super((byte) (16 & 0xff));
-    }
+    public final List<Pair<Integer, Integer>> eats     = new ArrayList<>();
+    public final List<Update>                 updates  = new ArrayList<>();
+    public final List<Integer>                removals = new ArrayList<>();
 
     @Override
     public void read(final ByteBuffer buf) {
         final int eatsCnt = buf.getShort();
         for (int i = 0; i < (eatsCnt & 0xffff); ++i) {
-            final CellEat eat = new CellEat();
-            eat.eaterId = buf.getInt();
-            eat.eatenId = buf.getInt();
+            final Pair<Integer, Integer> eat = new Pair<>();
+            eat.fst = buf.getInt();
+            eat.snd = buf.getInt();
             eats.add(eat);
         }
 
@@ -47,7 +39,7 @@ public class PacketUpdateCells extends ServerPacket {
             final int id = buf.getInt();
             if (id == 0)
                 break;
-            final CellUpdate update = new CellUpdate();
+            final Update update = new Update();
             update.id = id;
 
             update.x = buf.getInt();
