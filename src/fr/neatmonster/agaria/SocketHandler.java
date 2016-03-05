@@ -19,7 +19,7 @@ import fr.neatmonster.agaria.packets.ServerPacket;
 
 @WebSocket
 public class SocketHandler {
-    private String toString(final ByteBuffer buf) {
+    public static String toString(final ByteBuffer buf) {
         String out = "";
         for (int i = 0; i < buf.limit(); ++i) {
             if (!out.isEmpty())
@@ -50,7 +50,7 @@ public class SocketHandler {
     public void onWebSocketConnect(final Session session) {
         this.session = session;
 
-        manager.onSocketOpen();
+        manager.socketOpened();
     }
 
     @OnWebSocketMessage
@@ -72,24 +72,22 @@ public class SocketHandler {
             GameManager.logger.warning("unknown packet ID(" + packetId + ")");
             return;
         }
+        packet.read(buf);
 
-        manager.handlePacket(packet);
+        if (!manager.handlePacket(packet))
+            GameManager.logger.warning("unhandled packet " + packet.getClass().getSimpleName());
     }
 
     @OnWebSocketClose
     public void onWebSocketClose(final Session session, final int closeCode, final String closeReason) {
         latch.countDown();
 
-        manager.onSocketClose();
+        manager.socketClosed();
     }
 
     @OnWebSocketError
     public void onWebSocketError(final Session session, final Throwable cause) {
-        manager.onSocketError(cause);
-    }
-
-    public void close() {
-        session.close();
+        manager.socketErrored(cause);
     }
 
     public void sendPacket(final ClientPacket packet) {
@@ -105,5 +103,13 @@ public class SocketHandler {
         } catch (final IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public void close() {
+        session.close();
+    }
+
+    public boolean isClosed() {
+        return !session.isOpen();
     }
 }

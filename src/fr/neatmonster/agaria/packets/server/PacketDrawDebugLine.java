@@ -4,7 +4,7 @@ import java.nio.ByteBuffer;
 
 import fr.neatmonster.agaria.packets.ServerPacket;
 
-public class PacketDrawLine extends ServerPacket {
+public class PacketDrawDebugLine extends ServerPacket {
     public short x;
     public short y;
 

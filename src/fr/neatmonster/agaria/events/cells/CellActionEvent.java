@@ -1,4 +1,6 @@
-package fr.neatmonster.agaria.events.cell;
+package fr.neatmonster.agaria.events.cells;
+
+import fr.neatmonster.agaria.GameManager.Cell;
 
 public class CellActionEvent extends CellEvent {
     public final int     x;
@@ -8,9 +10,9 @@ public class CellActionEvent extends CellEvent {
     public final String  name;
     public final String  skin;
 
-    public CellActionEvent(final int id, final int x, final int y, final short size, final boolean virus,
+    public CellActionEvent(final Cell cell, final int x, final int y, final short size, final boolean virus,
             final String name, final String skin) {
-        super(id);
+        super(cell);
         this.x = x;
         this.y = y;
         this.size = size;

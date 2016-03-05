@@ -1,4 +1,6 @@
-package fr.neatmonster.agaria.events.cell;
+package fr.neatmonster.agaria.events.cells;
+
+import fr.neatmonster.agaria.GameManager.Cell;
 
 public class CellDestroyEvent extends CellEvent {
     public static enum Reason {
@@ -7,8 +9,8 @@ public class CellDestroyEvent extends CellEvent {
 
     public final Reason reason;
 
-    public CellDestroyEvent(final int id, final Reason reason) {
-        super(id);
+    public CellDestroyEvent(final Cell cell, final Reason reason) {
+        super(cell);
         this.reason = reason;
     }
 }

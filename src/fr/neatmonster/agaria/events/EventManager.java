@@ -11,8 +11,9 @@ public class EventManager {
 
     public void callEvent(final Event event) {
         final Set<EventExecutor> executors = this.executors.get(event.getClass());
-        for (final EventExecutor executor : executors)
-            executor.execute(event);
+        if (executors != null)
+            for (final EventExecutor executor : executors)
+                executor.execute(event);
     }
 
     @SuppressWarnings("unchecked")
