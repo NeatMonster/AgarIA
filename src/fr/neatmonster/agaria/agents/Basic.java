@@ -1,9 +1,11 @@
 package fr.neatmonster.agaria.agents;
 
+import java.util.Collection;
 import java.util.Timer;
 import java.util.TimerTask;
 
 import fr.neatmonster.agaria.GameManager;
+import fr.neatmonster.agaria.GameManager.Cell;
 import fr.neatmonster.agaria.ServerConnector;
 import fr.neatmonster.agaria.events.EventHandler;
 import fr.neatmonster.agaria.events.Listener;
@@ -50,7 +52,35 @@ public class Basic implements Listener {
 
             @Override
             public void run() {
-                // TODO Auto-generated method stub
+                final Collection<Cell> myCells = game.getMyCells();
+                if (myCells.isEmpty())
+                    return;
+                final Cell myCell = myCells.iterator().next();
+
+                Cell candidateCell = null;
+                double candidateDist = 0;
+
+                for (final Cell cell : game.getCells()) {
+                    if (cell.virus || cell.mine || cell.dead || !cell.visible)
+                        continue;
+
+                    if ((double) cell.size / (double) myCell.size > 0.5)
+                        continue;
+
+                    final double dist = Math.sqrt(Math.pow(cell.x - myCell.x, 2) + Math.pow(cell.y - myCell.y, 2));
+                    if (candidateCell != null && dist > candidateDist)
+                        continue;
+
+                    candidateCell = cell;
+                    candidateDist = dist;
+                }
+
+                if (candidateCell == null)
+                    return;
+
+                game.target(candidateCell.x, candidateCell.y);
+
+                GameManager.logger.info("closest " + candidateCell + ", distance " + candidateDist);
             }
         }, 100L, 100L);
     }
@@ -64,18 +94,18 @@ public class Basic implements Listener {
 
     @EventHandler
     public void onCellNew(final CellNewEvent event) {
-        GameManager.logger.info("My new ball " + event.id + ", total " + game.getMyCells().size());
+        GameManager.logger.info("my new ball " + event.id + ", total " + game.getMyCells().size());
     }
 
     @EventHandler
     public void onCellEat(final CellEatEvent event) {
         if (event.isMine())
-            GameManager.logger.info("I ate " + event.eatenId + ", my new size is " + game.getCell(event.id).size);
+            GameManager.logger.info("i ate " + event.eatenId + ", my new size is " + game.getCell(event.id).size);
     }
 
     @EventHandler
     public void onLeaderboardUpdate(final LeaderboardUpdateEvent event) {
-        GameManager.logger.info("Leaders on server: " + String.join(", ", event.newLeaderboard));
+        GameManager.logger.info("leaders on server: " + String.join(", ", event.newLeaderboard));
     }
 
     @EventHandler
@@ -89,10 +119,10 @@ public class Basic implements Listener {
     @EventHandler
     public void onCellDestroy(final CellDestroyEvent event) {
         if (event.isMine()) {
-            GameManager.logger.info("I lost my ball " + event.id + " because " + event.reason.name().toLowerCase());
+            GameManager.logger.info("i lost my ball " + event.id + " because " + event.reason.name().toLowerCase());
 
             if (game.getMyCells().isEmpty()) {
-                GameManager.logger.info("Lost all my balls, respawning");
+                GameManager.logger.info("lost all my balls, respawning");
                 game.spawn();
             }
         }
@@ -100,7 +130,7 @@ public class Basic implements Listener {
 
     @EventHandler
     public void onExperienceUpdate(final ExperienceUpdateEvent event) {
-        GameManager.logger.info("Experience update: current level is " + event.level + " and experience is "
+        GameManager.logger.info("experience update: current level is " + event.level + " and experience is "
                 + event.curExp + "/" + event.nxtExp);
     }
 }

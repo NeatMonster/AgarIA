@@ -94,6 +94,7 @@ public class SocketHandler {
         final ByteBuffer buf = ByteBuffer.allocate(1 + packet.getLength());
         buf.put(packet.getPacketId());
         packet.write(buf);
+        buf.rewind();
 
         GameManager.logger.finer("SEND packet ID=" + packet.getPacketId() + " LEN=" + buf.limit());
         GameManager.logger.finest("dump: " + toString(buf));

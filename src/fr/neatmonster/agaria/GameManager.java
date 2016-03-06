@@ -225,14 +225,9 @@ public class GameManager {
 
         @Override
         public Cell put(final Integer key, final Cell value) {
-            if (value.dead)
-                remove(key);
-            else {
-                if (value.mine)
-                    myCells.add(value);
-                return super.put(key, value);
-            }
-            return null;
+            if (value.mine)
+                myCells.add(value);
+            return super.put(key, value);
         }
 
         @Override
@@ -426,10 +421,13 @@ public class GameManager {
         leaderboard.clear();
         teamsScores.clear();
 
-        for (final Cell cell : cells.values())
-            cell.destroy(Reason.RESET);
+        final Collection<Cell> allCells = cells.values();
+
         cells.clear();
         myCells.clear();
+
+        for (final Cell cell : allCells)
+            cell.destroy(Reason.RESET);
 
         events.callEvent(new GameResetEvent());
     }
@@ -463,25 +461,28 @@ public class GameManager {
                 Cell eater = cells.get(eaterId);
                 if (eater == null)
                     eater = new Cell(eaterId);
+                cells.put(eaterId, eater);
+
                 eater.updateTick = ticks;
                 eater.update();
-                cells.put(eaterId, eater);
 
                 Cell eaten = cells.get(eatenId);
                 if (eaten == null)
                     eaten = new Cell(eatenId);
+                cells.remove(eatenId);
+
                 eaten.destroy(Reason.EATEN);
-                cells.put(eatenId, eaten);
 
                 events.callEvent(new CellEatEvent(eater, eaten));
 
-                logger.finer(eaterId + " ate " + eatenId + "(" + cells.get(eaterId) + ">" + cells.get(eatenId) + ")");
+                logger.finer(eaterId + " ate " + eatenId + "(" + eater + ">" + eaten + ")");
             }
 
             for (final PacketUpdateCells.Update update : packetUC.updates) {
                 Cell cell = cells.get(update.id);
                 if (cell == null)
                     cell = new Cell(update.id);
+                cells.put(update.id, cell);
 
                 final boolean isVirus = (update.flags & 1) > 0;
                 cell.virus = isVirus;
@@ -494,12 +495,11 @@ public class GameManager {
                     cell.rename(update.name);
                 if (update.skin != null)
                     cell.reskin(update.skin);
+
                 cell.appear();
 
                 cell.updateTick = ticks;
                 cell.update();
-
-                cells.put(update.id, cell);
 
                 events.callEvent(
                         new CellActionEvent(cell, update.x, update.y, update.size, isVirus, update.name, update.skin));
@@ -512,16 +512,16 @@ public class GameManager {
                 Cell cell = cells.get(removalId);
                 if (cell == null)
                     cell = new Cell(removalId);
+                cells.put(removalId, cell);
 
                 cell.updateTick = ticks;
                 cell.update();
 
-                if (cell.mine)
+                if (cell.mine) {
+                    cells.remove(removalId);
                     cell.destroy(Reason.MERGE);
-                else
+                } else
                     cell.disappear();
-
-                cells.put(removalId, cell);
 
                 logger.finer(removalId + "(" + cell + ") disappeared");
             }
@@ -536,10 +536,13 @@ public class GameManager {
         }
 
         else if (packet instanceof PacketClearCells) {
-            for (final Cell cell : cells.values())
-                cell.destroy(Reason.SERVER_FORCED);
+            final Collection<Cell> allCells = cells.values();
+
             cells.clear();
             myCells.clear();
+
+            for (final Cell cell : allCells)
+                cell.destroy(Reason.SERVER_FORCED);
         }
 
         else if (packet instanceof PacketDrawDebugLine) {
@@ -557,10 +560,12 @@ public class GameManager {
             Cell cell = cells.get(cellId);
             if (cell == null)
                 cell = new Cell(cellId);
+            cells.put(cellId, cell);
 
             cell.mine = true;
             if (myCells.isEmpty())
                 score = 0;
+            myCells.add(cell);
 
             if (spawnTask != null) {
                 logger.finer("detected new cell, disabling spawn() interval");
@@ -569,8 +574,6 @@ public class GameManager {
                 spawnTask.cancel();
                 spawnTask = null;
             }
-
-            cells.put(cellId, cell);
 
             events.callEvent(new CellNewEvent(cell));
 
@@ -662,8 +665,8 @@ public class GameManager {
                     if (cell.visible || time - cell.lastUpdate < inactiveDestroy)
                         continue;
 
+                    cells.remove(cell.id);
                     cell.destroy(Reason.INACTIVE);
-                    cells.remove(cell);
 
                     logger.fine("destroying inactive " + cell.id);
                 }
