@@ -1,4 +1,4 @@
-package fr.neatmonster.agaria.gui;
+package fr.neatmonster.agaria;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
@@ -19,7 +19,6 @@ import java.util.Set;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
-import fr.neatmonster.agaria.GameManager;
 import fr.neatmonster.agaria.GameManager.Cell;
 import fr.neatmonster.agaria.events.EventHandler;
 import fr.neatmonster.agaria.events.Listener;
@@ -27,6 +26,7 @@ import fr.neatmonster.agaria.events.game.MapSizeUpdateEvent;
 import fr.neatmonster.agaria.utils.Pair;
 import fr.neatmonster.agaria.utils.StringUtils;
 
+@SuppressWarnings("serial")
 public class GameWindow extends JFrame implements Runnable {
     private static final Dimension size = new Dimension(1280, 720);
 
@@ -91,7 +91,7 @@ public class GameWindow extends JFrame implements Runnable {
 
                         @Override
                         public int compare(final Cell o1, final Cell o2) {
-                            return (int) (o1.sizeRender - o2.sizeRender);
+                            return o1.size - o2.size;
                         }
                     });
                     for (final Cell cell : cells) {
@@ -141,10 +141,11 @@ public class GameWindow extends JFrame implements Runnable {
                             g2d.draw(new Ellipse2D.Double(xCell, yCell, 2.0 * radius, 2.0 * radius));
 
                             if (cell.name != null) {
-                                final Pair<Double, Double> bounds = StringUtils.getBounds(g2d, FONT, cell.name);
+                                final Font font = FONT.deriveFont(12f / (float) scale);
+                                final Pair<Double, Double> bounds = StringUtils.getBounds(g2d, font, cell.name);
                                 final float xString = (float) (cell.xRender - bounds.fst / 2f);
                                 final float yString = (float) (cell.yRender + bounds.snd / 2f);
-                                g2d.setFont(FONT);
+                                g2d.setFont(font);
                                 g2d.setColor(Color.BLACK);
                                 g2d.drawString(cell.name, xString - 1f, yString);
                                 g2d.drawString(cell.name, xString + 1f, yString);

@@ -6,6 +6,7 @@ import java.util.TimerTask;
 
 import fr.neatmonster.agaria.GameManager;
 import fr.neatmonster.agaria.GameManager.Cell;
+import fr.neatmonster.agaria.GameWindow;
 import fr.neatmonster.agaria.ServerConnector;
 import fr.neatmonster.agaria.events.EventHandler;
 import fr.neatmonster.agaria.events.Listener;
@@ -17,13 +18,12 @@ import fr.neatmonster.agaria.events.game.GameResetEvent;
 import fr.neatmonster.agaria.events.game.LeaderboardUpdateEvent;
 import fr.neatmonster.agaria.events.socket.SocketErrorEvent;
 import fr.neatmonster.agaria.events.socket.SocketOpenEvent;
-import fr.neatmonster.agaria.gui.GameWindow;
 
-public class Basic implements Listener {
+public class BasicAgent implements Listener {
     private static final String REGION = "EU-London";
 
     public static void main(final String[] args) {
-        new Basic();
+        new BasicAgent();
     }
 
     private final GameManager game;
@@ -32,7 +32,7 @@ public class Basic implements Listener {
     private final Timer timer;
     private TimerTask   targetTask;
 
-    public Basic() {
+    public BasicAgent() {
         timer = new Timer();
 
         game = new GameManager("AgarIA");
