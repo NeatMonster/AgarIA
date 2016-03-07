@@ -1,6 +1,6 @@
 package fr.neatmonster.agaria.agents;
 
-import java.util.Collection;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -17,6 +17,7 @@ import fr.neatmonster.agaria.events.game.GameResetEvent;
 import fr.neatmonster.agaria.events.game.LeaderboardUpdateEvent;
 import fr.neatmonster.agaria.events.socket.SocketErrorEvent;
 import fr.neatmonster.agaria.events.socket.SocketOpenEvent;
+import fr.neatmonster.agaria.gui.GameWindow;
 
 public class Basic implements Listener {
     private static final String REGION = "EU-London";
@@ -37,6 +38,8 @@ public class Basic implements Listener {
         game = new GameManager("AgarIA");
         game.registerEvents(this);
 
+        new GameWindow(game);
+
         server = ServerConnector.getFFAServer(REGION);
         GameManager.logger.info("connecting to " + server[0] + " with key " + server[1]);
         game.connect("ws://" + server[0], server[1]);
@@ -52,7 +55,7 @@ public class Basic implements Listener {
 
             @Override
             public void run() {
-                final Collection<Cell> myCells = game.getMyCells();
+                final Set<Cell> myCells = game.getMyCells();
                 if (myCells.isEmpty())
                     return;
                 final Cell myCell = myCells.iterator().next();

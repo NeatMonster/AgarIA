@@ -16,22 +16,10 @@ import org.eclipse.jetty.websocket.api.annotations.WebSocket;
 import fr.neatmonster.agaria.packets.ClientPacket;
 import fr.neatmonster.agaria.packets.PacketFactory;
 import fr.neatmonster.agaria.packets.ServerPacket;
+import fr.neatmonster.agaria.utils.StringUtils;
 
 @WebSocket
 public class SocketHandler {
-    public static String toString(final ByteBuffer buf) {
-        String out = "";
-        for (int i = 0; i < buf.limit(); ++i) {
-            if (!out.isEmpty())
-                out += " ";
-            final String chr = Integer.toHexString(buf.get(i));
-            if (chr.length() == 1)
-                out += "0";
-            out += chr;
-        }
-        return out;
-    }
-
     private final GameManager manager;
 
     private final CountDownLatch latch;
@@ -65,7 +53,7 @@ public class SocketHandler {
         final byte packetId = buf.get();
 
         GameManager.logger.finer("RECV packet ID=" + packetId + " LEN=" + length);
-        GameManager.logger.finest("dump: " + toString(buf));
+        GameManager.logger.finest("dump: " + StringUtils.toString(buf));
 
         final ServerPacket packet = PacketFactory.createPacket(packetId);
         if (packet == null) {
@@ -97,7 +85,7 @@ public class SocketHandler {
         buf.rewind();
 
         GameManager.logger.finer("SEND packet ID=" + packet.getPacketId() + " LEN=" + buf.limit());
-        GameManager.logger.finest("dump: " + toString(buf));
+        GameManager.logger.finest("dump: " + StringUtils.toString(buf));
 
         try {
             session.getRemote().sendBytes(buf);

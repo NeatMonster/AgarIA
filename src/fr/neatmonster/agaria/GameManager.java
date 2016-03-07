@@ -92,6 +92,10 @@ public class GameManager {
         public long updateTick;
         public long lastUpdate;
 
+        public double xRender    = 0.0;
+        public double yRender    = 0.0;
+        public double sizeRender = 0.0;
+
         public Cell(final int id) {
             this.id = id;
 
@@ -104,10 +108,20 @@ public class GameManager {
                 return;
             visible = true;
 
+            xRender = x;
+            yRender = y;
+            sizeRender = size;
+
             events.callEvent(new CellAppearEvent(this));
 
             if (mine)
                 updateScore();
+        }
+
+        public void destroy(final Reason reason) {
+            dead = true;
+
+            events.callEvent(new CellDestroyEvent(this, reason));
         }
 
         public void disappear() {
@@ -183,10 +197,10 @@ public class GameManager {
             events.callEvent(new CellUpdateEvent(this, oldUpdate, lastUpdate));
         }
 
-        public void destroy(final Reason reason) {
-            dead = true;
-
-            events.callEvent(new CellDestroyEvent(this, reason));
+        public void tick() {
+            xRender = (9.0 * xRender + x) / 10.0;
+            yRender = (9.0 * yRender + y) / 10.0;
+            sizeRender = (29.0 * sizeRender + size) / 30.0;
         }
 
         @Override
@@ -253,16 +267,16 @@ public class GameManager {
         events.registerEvents(listener);
     }
 
-    public Cell getCell(final int id) {
+    public synchronized Cell getCell(final int id) {
         return cells.get(id);
     }
 
-    public Collection<Cell> getCells() {
-        return cells.values();
+    public synchronized Set<Cell> getCells() {
+        return new HashSet<Cell>(cells.values());
     }
 
-    public Collection<Cell> getMyCells() {
-        return myCells;
+    public synchronized Set<Cell> getMyCells() {
+        return new HashSet<Cell>(myCells);
     }
 
     public void authentificate(final String authToken, final byte authProvider) {
@@ -403,7 +417,7 @@ public class GameManager {
         return true;
     }
 
-    private void reset() {
+    private synchronized void reset() {
         logger.fine("reset()");
 
         spawnAttempt = 0;
@@ -432,7 +446,7 @@ public class GameManager {
         events.callEvent(new GameResetEvent());
     }
 
-    private void updateScore() {
+    private synchronized void updateScore() {
         int totalSize = 0;
         for (final Cell cell : myCells)
             totalSize += cell.size * cell.size;
@@ -448,7 +462,7 @@ public class GameManager {
         logger.fine("score: " + score);
     }
 
-    boolean handlePacket(final ServerPacket packet) {
+    synchronized boolean handlePacket(final ServerPacket packet) {
         if (packet instanceof PacketUpdateCells) {
             final PacketUpdateCells packetUC = (PacketUpdateCells) packet;
 
@@ -484,9 +498,8 @@ public class GameManager {
                     cell = new Cell(update.id);
                 cells.put(update.id, cell);
 
-                final boolean isVirus = (update.flags & 1) > 0;
-                cell.virus = isVirus;
-                cell.color = new Color(0xff00000 | update.r << 16 | update.g << 8 | update.b);
+                cell.virus = (update.flags & 1) > 0;
+                cell.color = new Color(0xff000000 | update.r & 0xff << 16 | update.g & 0xff << 8 | update.b & 0xff);
 
                 cell.move(update.x, update.y);
                 cell.resize(update.size);
@@ -501,11 +514,11 @@ public class GameManager {
                 cell.updateTick = ticks;
                 cell.update();
 
-                events.callEvent(
-                        new CellActionEvent(cell, update.x, update.y, update.size, isVirus, update.name, update.skin));
+                events.callEvent(new CellActionEvent(cell, update.x, update.y, update.size, cell.virus, update.name,
+                        update.skin));
 
                 logger.finest("action: id=" + update.id + " x=" + update.x + " y=" + update.y + " size=" + update.size
-                        + " is_virus=" + isVirus + " name=" + update.name + " skin=" + update.skin);
+                        + " is_virus=" + cell.virus + " name=" + update.name + " skin=" + update.skin);
             }
 
             for (final Integer removalId : packetUC.removals) {
@@ -556,11 +569,10 @@ public class GameManager {
         else if (packet instanceof PacketAddCell) {
             final PacketAddCell packetAC = (PacketAddCell) packet;
 
-            final int cellId = packetAC.id;
-            Cell cell = cells.get(cellId);
+            Cell cell = cells.get(packetAC.id);
             if (cell == null)
-                cell = new Cell(cellId);
-            cells.put(cellId, cell);
+                cell = new Cell(packetAC.id);
+            cells.put(packetAC.id, cell);
 
             cell.mine = true;
             if (myCells.isEmpty())
@@ -577,7 +589,7 @@ public class GameManager {
 
             events.callEvent(new CellNewEvent(cell));
 
-            logger.fine("my new cell: " + cellId);
+            logger.fine("my new cell: " + packetAC.id);
         }
 
         else if (packet instanceof PacketUpdateLeaderboard) {
@@ -651,7 +663,7 @@ public class GameManager {
         return true;
     }
 
-    void socketOpened() {
+    synchronized void socketOpened() {
         logger.info("connected to server");
 
         timer.schedule(inactiveTask = new TimerTask() {
@@ -661,14 +673,16 @@ public class GameManager {
                 logger.fine("destroying inactive cells");
 
                 final long time = System.currentTimeMillis();
-                for (final Cell cell : new ArrayList<>(cells.values())) {
-                    if (cell.visible || time - cell.lastUpdate < inactiveDestroy)
-                        continue;
+                synchronized (this) {
+                    for (final Cell cell : new ArrayList<>(cells.values())) {
+                        if (cell.visible || time - cell.lastUpdate < inactiveDestroy)
+                            continue;
 
-                    cells.remove(cell.id);
-                    cell.destroy(Reason.INACTIVE);
+                        cells.remove(cell.id);
+                        cell.destroy(Reason.INACTIVE);
 
-                    logger.fine("destroying inactive " + cell.id);
+                        logger.fine("destroying inactive " + cell.id);
+                    }
                 }
             }
         }, inactiveCheck, inactiveCheck);
@@ -692,7 +706,7 @@ public class GameManager {
         events.callEvent(new SocketOpenEvent());
     }
 
-    void socketClosed() {
+    synchronized void socketClosed() {
         logger.info("disconnected");
 
         events.callEvent(new SocketCloseEvent());
@@ -700,11 +714,16 @@ public class GameManager {
         reset();
     }
 
-    void socketErrored(final Throwable cause) {
+    synchronized void socketErrored(final Throwable cause) {
         logger.info("connection error: " + cause.getMessage());
 
         events.callEvent(new SocketErrorEvent(cause));
 
         reset();
+    }
+
+    public synchronized void tick() {
+        for (final Cell cell : cells.values())
+            cell.tick();
     }
 }
